@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>LTE Status Logger</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <div id="header">
+    <h1>📡 LTE Status Logger</h1>
+    <span id="entry-count">0 entries</span>
+    <button class="btn" id="btn-export">Export CSV</button>
+    <button class="btn btn-danger" id="btn-clear">Clear log</button>
+  </div>
+
+  <!-- Signal quality summary (latest values) -->
+  <div id="summary">
+    <div class="metric">
+      <div class="metric-label">RSRP</div>
+      <div class="metric-value q-neutral" id="sum-rsrp">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">RSRQ</div>
+      <div class="metric-value q-neutral" id="sum-rsrq">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">SINR</div>
+      <div class="metric-value q-neutral" id="sum-sinr">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">RSSI</div>
+      <div class="metric-value q-neutral" id="sum-rssi">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Band</div>
+      <div class="metric-value q-neutral" id="sum-band">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Bandwidth</div>
+      <div class="metric-value q-neutral" id="sum-bw">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">DL speed</div>
+      <div class="metric-value q-neutral" id="sum-dl">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">UL speed</div>
+      <div class="metric-value q-neutral" id="sum-ul">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Status</div>
+      <div class="metric-value q-neutral" id="sum-status">—</div>
+    </div>
+  </div>
+
+  <!-- Column visibility toggle -->
+  <div id="col-toggle">
+    <span>Columns:</span>
+    <label><input type="checkbox" id="chk-key" checked> Key signal</label>
+    <label><input type="checkbox" id="chk-cell" checked> Cell info</label>
+    <label><input type="checkbox" id="chk-ca"> CA / CQI</label>
+    <label><input type="checkbox" id="chk-device"> Device info</label>
+    <label><input type="checkbox" id="chk-conn"> Connection</label>
+  </div>
+
+  <!-- Log table -->
+  <div id="table-wrapper">
+    <div id="no-data">No data yet. Open <strong>http://192.168.1.1/indexMain.cgi</strong> and navigate to <em>Systemový monitor → Stav LTE</em>.</div>
+    <table id="log-table" style="display:none">
+      <thead id="log-thead"></thead>
+      <tbody id="log-tbody"></tbody>
+    </table>
+  </div>
+
+  <div id="footer" id="footer-info"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
