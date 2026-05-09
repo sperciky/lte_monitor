@@ -5,14 +5,28 @@
   const url = location.href;
   console.log(`${TAG} started | url=${url} | top=${window === window.top}`);
 
-  // Write startup evidence to storage so the popup can confirm injection
-  // even when DevTools is not open.
-  chrome.storage.local.get(['lteStartups'], r => {
-    const list = r.lteStartups || [];
-    list.push({ ts: Date.now(), url, top: window === window.top });
-    if (list.length > 20) list.splice(0, list.length - 20);
-    chrome.storage.local.set({ lteStartups: list });
-  });
+  // ── Extension context guard ────────────────────────────────────────────────
+  // When the extension is reloaded, the context is invalidated but setInterval
+  // keeps firing. Any chrome.* call then throws "Extension context invalidated".
+  // Call this before every chrome.* API call; it returns false when stale.
+  function contextAlive() {
+    try {
+      return !!chrome.runtime?.id;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ── Startup ping (so popup can confirm injection without DevTools) ──────────
+  if (contextAlive()) {
+    chrome.storage.local.get(['lteStartups'], r => {
+      if (!contextAlive()) return;
+      const list = r.lteStartups || [];
+      list.push({ ts: Date.now(), url, top: window === window.top });
+      if (list.length > 20) list.splice(0, list.length - 20);
+      chrome.storage.local.set({ lteStartups: list });
+    });
+  }
 
   // ── Data extraction from any document ──────────────────────────────────────
   function extractFromDoc(doc) {
@@ -21,7 +35,7 @@
     const titleEl = doc.querySelector('.unit_title');
     const titleText = titleEl ? titleEl.textContent.trim() : '';
     if (!titleText.includes('Stav LTE')) {
-      console.log(`${TAG} .unit_title = "${titleText}" – not an LTE status page`);
+      console.log(`${TAG} .unit_title="${titleText}" – not an LTE status page`);
       return null;
     }
 
@@ -46,22 +60,27 @@
     return n > 0 ? record : null;
   }
 
-  // ── Message to background ──────────────────────────────────────────────────
+  // ── Send to background ─────────────────────────────────────────────────────
   function sendData(data, sourceUrl) {
+    if (!contextAlive()) return;
     const payload = { type: 'LOG_LTE_DATA', data, timestamp: Date.now(), frameUrl: sourceUrl };
-    chrome.runtime.sendMessage(payload, response => {
-      if (chrome.runtime.lastError) {
-        console.error(`${TAG} sendMessage error:`, chrome.runtime.lastError.message);
-      } else {
-        console.log(`${TAG} sendMessage OK – ${Object.keys(data).length} fields stored`);
-      }
-    });
+    try {
+      chrome.runtime.sendMessage(payload, response => {
+        if (chrome.runtime.lastError) {
+          console.warn(`${TAG} sendMessage:`, chrome.runtime.lastError.message);
+        } else {
+          console.log(`${TAG} OK – ${Object.keys(data).length} fields stored`);
+        }
+      });
+    } catch (e) {
+      console.warn(`${TAG} sendMessage threw (context likely invalidated):`, e.message);
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
   // STRATEGY A – parent frame (indexMain.cgi)
-  // Reads the iframe's contentDocument directly (same-origin DOM access).
-  // This sidesteps all iframe content-script injection timing problems.
+  // Reads the #mainFrame iframe's contentDocument via same-origin DOM access.
+  // Polls every 5 s. Stops itself cleanly when extension context is invalidated.
   // ─────────────────────────────────────────────────────────────────────────────
   function parentFrameStrategy() {
     const iframe = document.getElementById('mainFrame');
@@ -72,8 +91,16 @@
     console.log(`${TAG} #mainFrame found – using parent-frame strategy`);
 
     let lastStr = '';
+    let intervalId = null;
 
     function poll() {
+      // Stop the interval and give up if the extension was reloaded
+      if (!contextAlive()) {
+        console.log(`${TAG} context invalidated – stopping poll`);
+        clearInterval(intervalId);
+        return;
+      }
+
       let iDoc;
       try {
         iDoc = iframe.contentDocument;
@@ -87,7 +114,7 @@
         return;
       }
       if (iDoc.readyState !== 'complete') {
-        console.log(`${TAG} iframe readyState: ${iDoc.readyState} – waiting`);
+        console.log(`${TAG} iframe readyState=${iDoc.readyState} – waiting`);
         return;
       }
 
@@ -95,21 +122,17 @@
       if (!data) return;
 
       const str = JSON.stringify(data);
-      if (str === lastStr) {
-        console.log(`${TAG} data unchanged – skip`);
-        return;
-      }
+      if (str === lastStr) return;
       lastStr = str;
       sendData(data, iframe.src || url);
     }
 
     function startPolling() {
-      console.log(`${TAG} iframe ready – starting poll every 5 s`);
-      poll(); // immediate first read
-      setInterval(poll, 5000);
+      console.log(`${TAG} iframe ready – polling every 5 s`);
+      poll();
+      intervalId = setInterval(poll, 5000);
     }
 
-    // If the iframe is already loaded, start immediately; otherwise wait.
     if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete') {
       startPolling();
     } else {
@@ -120,27 +143,28 @@
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // STRATEGY B – direct access (lteStatus.cgi opened as the top-level document,
-  // not inside indexMain.cgi). Uses MutationObserver to catch AJAX refreshes.
+  // STRATEGY B – lteStatus.cgi opened as the top-level document directly.
+  // Uses MutationObserver to catch the AJAX body replacement every 5 s.
   // ─────────────────────────────────────────────────────────────────────────────
   function directPageStrategy() {
-    // Only activate when this IS the top-level document AND has LTE content.
     if (window !== window.top) {
-      // Inside an iframe embedded in indexMain.cgi – strategy A handles it.
       console.log(`${TAG} in embedded iframe – parent-frame strategy covers this`);
       return false;
     }
 
-    const data = extractFromDoc(document);
-    if (!data) {
+    if (!extractFromDoc(document)) {
       console.log(`${TAG} not an LTE status page – nothing to do`);
       return false;
     }
 
-    console.log(`${TAG} direct lteStatus.cgi page detected`);
+    console.log(`${TAG} direct lteStatus.cgi detected`);
     let lastStr = '';
 
     function attempt() {
+      if (!contextAlive()) {
+        observer.disconnect();
+        return;
+      }
       const d = extractFromDoc(document);
       if (!d) return;
       const str = JSON.stringify(d);
@@ -162,8 +186,7 @@
 
   // ── Init ───────────────────────────────────────────────────────────────────
   function init() {
-    const usedParent = parentFrameStrategy();
-    if (!usedParent) directPageStrategy();
+    if (!parentFrameStrategy()) directPageStrategy();
   }
 
   if (document.readyState === 'loading') {
