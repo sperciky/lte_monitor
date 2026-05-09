@@ -84,7 +84,13 @@
 
   <!-- Log table -->
   <div id="table-wrapper">
-    <div id="no-data">No data yet. Open <strong>http://192.168.1.1/indexMain.cgi</strong> and navigate to <em>Systemový monitor → Stav LTE</em>.</div>
+    <div id="no-data">
+      No data yet.<br><br>
+      1. Open <strong>http://192.168.1.1/indexMain.cgi</strong><br>
+      2. Navigate to <em>Systemový monitor → Stav LTE</em><br>
+      3. <strong>Reload that tab</strong> after installing/updating the extension so the content script injects.<br><br>
+      Then check <em>🔍 Debug info</em> above for diagnostic details.
+    </div>
     <table id="log-table" style="display:none">
       <thead id="log-thead"></thead>
       <tbody id="log-tbody"></tbody>

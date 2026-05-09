@@ -17,7 +17,8 @@
       "matches": ["http://192.168.1.1/*"],
       "js": ["content_script.js"],
       "all_frames": true,
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "match_about_blank": false
     }
   ],
   "action": {
