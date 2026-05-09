@@ -266,11 +266,28 @@ function exportCSV() {
   URL.revokeObjectURL(url);
 }
 
+// ── Debug panel ──────────────────────────────────────────────────────────────
+function updateDebug(dbg) {
+  if (!dbg) {
+    document.getElementById('dbg-last').textContent    = 'no messages received yet';
+    document.getElementById('dbg-frame').textContent   = '—';
+    document.getElementById('dbg-frameid').textContent = '—';
+    document.getElementById('dbg-total').textContent   = '0';
+    return;
+  }
+  document.getElementById('dbg-last').textContent =
+    dbg.lastReceived ? formatTS(dbg.lastReceived) : '—';
+  document.getElementById('dbg-frame').textContent   = dbg.lastFrameUrl ?? '—';
+  document.getElementById('dbg-frameid').textContent = dbg.lastFrameId ?? '—';
+  document.getElementById('dbg-total').textContent   = dbg.totalStored ?? '0';
+}
+
 // ── Init ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Load stored log
+  // Load stored log + debug info
   chrome.runtime.sendMessage({ type: 'GET_LOG' }, response => {
     allLog = response?.log ?? [];
+    updateDebug(response?.debug ?? null);
     render();
   });
 
@@ -281,6 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!confirm('Clear all logged data?')) return;
     chrome.runtime.sendMessage({ type: 'CLEAR_LOG' }, () => {
       allLog = [];
+      updateDebug(null);
       render();
     });
   });

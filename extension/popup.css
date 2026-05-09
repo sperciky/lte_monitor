@@ -106,6 +106,38 @@ body {
 .q-poor      { color: #f87171; }
 .q-neutral   { color: #93c5fd; }
 
+/* ── Debug panel ───────────────────────────────────────────── */
+#debug-panel {
+  background: #12151b;
+  border-bottom: 1px solid #2e3340;
+  flex-shrink: 0;
+}
+
+#debug-panel summary {
+  padding: 4px 12px;
+  font-size: 11px;
+  color: #6b7280;
+  cursor: pointer;
+  user-select: none;
+}
+
+#debug-panel summary:hover {
+  color: #9ca3af;
+}
+
+#debug-body {
+  padding: 6px 14px 8px;
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.8;
+  border-top: 1px solid #1f2937;
+}
+
+#debug-body b { color: #d1d5db; }
+#debug-body span { color: #60a5fa; font-family: monospace; }
+#debug-body code { color: #fbbf24; }
+#debug-body a { color: #60a5fa; }
+
 /* ── Column toggle ─────────────────────────────────────────── */
 #col-toggle {
   padding: 4px 12px;
