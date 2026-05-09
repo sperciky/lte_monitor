@@ -59,15 +59,17 @@
   <details id="debug-panel">
     <summary>🔍 Debug info</summary>
     <div id="debug-body">
+      <p><b>Content script injections seen:</b></p>
+      <div id="dbg-startups" style="margin:2px 0 6px 8px;font-family:monospace;color:#fbbf24;font-size:10px">—</div>
       <p><b>Last message received by background:</b> <span id="dbg-last">—</span></p>
       <p><b>Source frame URL:</b> <span id="dbg-frame">—</span></p>
       <p><b>Frame ID:</b> <span id="dbg-frameid">—</span></p>
       <p><b>Total stored entries:</b> <span id="dbg-total">—</span></p>
       <p style="margin-top:6px;color:#9ca3af;font-size:10px">
-        For content-script logs: open DevTools on the router tab → Console → switch
-        frame context to <code>lteStatus.cgi</code> in the dropdown.<br>
-        For background logs: <a id="sw-link" href="#" target="_blank">open service worker DevTools</a>
-        (chrome://extensions → LTE Status Logger → service worker).
+        If <em>Content script injections seen</em> is empty the URL in the address bar
+        does not match the extension's pattern.<br>
+        Check: is the router on <code>http://</code> or <code>https://</code>?
+        Does it use port 80/443 or a custom port (e.g. <code>:8080</code>)?
       </p>
     </div>
   </details>

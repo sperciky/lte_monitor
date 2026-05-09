@@ -267,7 +267,17 @@ function exportCSV() {
 }
 
 // ── Debug panel ──────────────────────────────────────────────────────────────
-function updateDebug(dbg) {
+function updateDebug(dbg, startups) {
+  // Injection pings
+  const startupsEl = document.getElementById('dbg-startups');
+  if (!startups || startups.length === 0) {
+    startupsEl.textContent = 'none – content script has never injected into 192.168.1.1';
+  } else {
+    startupsEl.textContent = startups.slice(-5).reverse().map(s =>
+      `${formatTS(s.ts)}  ${s.url}  top=${s.top}`
+    ).join('\n');
+  }
+
   if (!dbg) {
     document.getElementById('dbg-last').textContent    = 'no messages received yet';
     document.getElementById('dbg-frame').textContent   = '—';
@@ -284,11 +294,13 @@ function updateDebug(dbg) {
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Load stored log + debug info
+  // Load stored log + debug info + startup pings
   chrome.runtime.sendMessage({ type: 'GET_LOG' }, response => {
     allLog = response?.log ?? [];
-    updateDebug(response?.debug ?? null);
-    render();
+    chrome.storage.local.get(['lteStartups'], r => {
+      updateDebug(response?.debug ?? null, r.lteStartups ?? []);
+      render();
+    });
   });
 
   // Controls

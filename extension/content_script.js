@@ -5,6 +5,15 @@
   const url = location.href;
   console.log(`${TAG} started | url=${url} | top=${window === window.top}`);
 
+  // Write startup evidence to storage so the popup can confirm injection
+  // even when DevTools is not open.
+  chrome.storage.local.get(['lteStartups'], r => {
+    const list = r.lteStartups || [];
+    list.push({ ts: Date.now(), url, top: window === window.top });
+    if (list.length > 20) list.splice(0, list.length - 20);
+    chrome.storage.local.set({ lteStartups: list });
+  });
+
   // ── Data extraction from any document ──────────────────────────────────────
   function extractFromDoc(doc) {
     if (!doc) return null;
